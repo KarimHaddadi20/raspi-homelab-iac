@@ -5,14 +5,14 @@ pipeline {
         stage('Deploy via SSH') {
             steps {
                 script {
-                    // On charge l'IP et la Clé SSH
+                    // On utilise withCredentials qui est TOUJOURS disponible
                     withCredentials([
                         string(credentialsId: 'RASPI_IP', variable: 'IP'),
                         sshUserPrivateKey(credentialsId: 'RASPI_SSH_KEY', keyFileVariable: 'SSH_KEY_FILE', usernameVariable: 'SSH_USER')
                     ]) {
                         echo "Déploiement sur ${IP} via clé SSH..."
                         
-                        // On utilise -i avec le fichier de clé temporaire créé par Jenkins
+                        // On utilise directement les commandes sh sans passer par sshagent
                         sh """
                             ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'mkdir -p ~/ansible_deploy'
                             scp -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} -r ./* ${SSH_USER}@${IP}:~/ansible_deploy/
