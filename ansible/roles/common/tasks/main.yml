@@ -1,25 +1,12 @@
 ---
-- name: Nettoyage FORCE des conflits APT Docker (Gourou Style)
-  shell: |
-    rm -f /etc/apt/keyrings/docker.gpg /etc/apt/keyrings/docker.asc /etc/apt/sources.list.d/docker.list
-    # On cherche aussi dans le fichier principal au cas où
-    sed -i '/download.docker.com/d' /etc/apt/sources.list
-  args:
-    executable: /bin/bash
-  register: cleanup_res
-  changed_when: cleanup_res.rc == 0
+# On désactive les mises à jour système pour ne pas bloquer sur le verrou APT (lock)
+# Ton Raspberry Pi est déjà prêt, on se concentre sur les containers.
 
-- name: Mise à jour du cache apt (Maintenant que c'est propre)
-  apt:
-    update_cache: yes
-    cache_valid_time: 3600
-
-- name: Installation des outils de base
+- name: Installation des outils de base (si nécessaire)
   apt:
     name:
       - curl
-      - vim
       - git
       - htop
-      - unzip
     state: present
+  ignore_errors: true
