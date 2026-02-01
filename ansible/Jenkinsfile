@@ -10,21 +10,20 @@ pipeline {
                         string(credentialsId: 'RASPI_PASS', variable: 'PASS'),
                         file(credentialsId: 'RASPI_SSH_KEY_FILE', variable: 'KEY_PATH')
                     ]) {
-                        echo "Déploiement sur ${IP}..."
+                        echo "Déploiement final sur ${IP}..."
                         sh """
                             chmod 600 ${KEY_PATH}
-                            
-                            # 1. On nettoie et on crée le dossier
-                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy'
-                            
-                            # 2. On copie TOUT le projet
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy/ansible/inventory'
                             scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./* ${USER}@${IP}:~/ansible_deploy/
                             
-                            # 3. On lance Ansible (on cherche site.yml là où il est vraiment)
                             ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} '
                                 cd ~/ansible_deploy
-                                # Si site.yml est dans un dossier ansible/, on y va
                                 [ -d ansible ] && cd ansible
+                                
+                                # LA MAGIE DU GOUROU : On recrée l'inventaire dynamiquement
+                                echo "[raspi]" > inventory/hosts.ini
+                                echo "localhost ansible_connection=local" >> inventory/hosts.ini
+                                
                                 ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"
                             '
                         """
