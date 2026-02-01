@@ -13,19 +13,15 @@ pipeline {
                         echo "Déploiement final sur ${IP}..."
                         sh """
                             chmod 600 ${KEY_PATH}
-                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy/ansible/inventory'
-                            scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./* ${USER}@${IP}:~/ansible_deploy/
                             
-                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} '
-                                cd ~/ansible_deploy
-                                [ -d ansible ] && cd ansible
-                                
-                                # LA MAGIE DU GOUROU : On recrée l'inventaire dynamiquement
-                                echo "[raspi]" > inventory/hosts.ini
-                                echo "localhost ansible_connection=local" >> inventory/hosts.ini
-                                
-                                ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"
-                            '
+                            # 1. Nettoyage et création du dossier de base
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy"
+                            
+                            # 2. Copie du contenu du dossier ansible
+                            scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./ansible/* ${USER}@${IP}:~/ansible_deploy/
+                            
+                            # 3. Exécution en une seule ligne pour éviter les erreurs de dossier
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "cd ~/ansible_deploy && mkdir -p inventory && echo '[raspi]' > inventory/hosts.ini && echo 'localhost ansible_connection=local' >> inventory/hosts.ini && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars 'ansible_sudo_pass=${PASS}'"
                         """
                     }
                 }
