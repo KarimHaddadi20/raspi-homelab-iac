@@ -1,0 +1,10 @@
+---
+- name: Déploiement complet du HomeLab
+  hosts: raspi
+  become: true
+
+  roles:
+    - common
+    - docker
+    - proxy
+    - jenkins

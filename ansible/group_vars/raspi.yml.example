@@ -1,0 +1,5 @@
+---
+# Variables pour le groupe raspi
+# Remplacer par vos valeurs
+ansible_user: votre_utilisateur
+ansible_python_interpreter: /usr/bin/python3

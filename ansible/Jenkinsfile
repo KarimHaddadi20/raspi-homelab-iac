@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+
+    environment {
+        ANSIBLE_FORCE_COLOR = 'true'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                echo 'Vérification de la syntaxe Ansible...'
+                // sh 'ansible-lint site.yml' // À activer quand le plugin est installé
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Déploiement de l\'infrastructure...'
+                // Note: Jenkins aura besoin des credentials pour accéder au Pi
+                sh 'ansible-playbook site.yml -i inventory/hosts.ini'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

@@ -1,0 +1,12 @@
+.vault_pass
+*.kdbx
+*.log
+.terraform/
+.vagrant/
+.env
+inventory/hosts.ini
+group_vars/raspi.yml
+**/jenkins_home/
+.git/
+node_modules/
+*.pyc

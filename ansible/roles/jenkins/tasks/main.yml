@@ -1,0 +1,32 @@
+---
+- name: Création du dossier Jenkins
+  file:
+    path: "/home/{{ ansible_user }}/jenkins"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Déploiement du docker-compose Jenkins
+  template:
+    src: docker-compose.yml.j2
+    dest: "/home/{{ ansible_user }}/jenkins/docker-compose.yml"
+
+- name: Lancement de Jenkins
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ ansible_user }}/jenkins"
+    state: present
+
+- name: Attente du démarrage de Jenkins
+  wait_for:
+    path: "/home/{{ ansible_user }}/jenkins/jenkins_home/secrets/initialAdminPassword"
+    state: present
+    timeout: 300
+
+- name: Récupération du mot de passe initial
+  slurp:
+    src: "/home/{{ ansible_user }}/jenkins/jenkins_home/secrets/initialAdminPassword"
+  register: jenkins_password
+
+- name: Affichage du mot de passe initial
+  debug:
+    msg: "Ton mot de passe Jenkins initial est : {{ jenkins_password['content'] | b64decode }}"
