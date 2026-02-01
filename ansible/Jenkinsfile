@@ -2,19 +2,22 @@ pipeline {
     agent any
 
     stages {
-        stage('Deploy via SSH Key') {
+        stage('Deploy via SSH') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'RASPI_IP', variable: 'IP')]) {
-                        // On utilise le credential SSH qu'on vient de créer
-                        sshagent(credentials: ['RASPI_SSH_KEY']) {
-                            echo "Déploiement sécurisé sur ${IP}..."
-                            sh """
-                                ssh -o StrictHostKeyChecking=no ken@${IP} 'mkdir -p ~/ansible_deploy'
-                                scp -r ./* ken@${IP}:~/ansible_deploy/
-                                ssh ken@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini'
-                            """
-                        }
+                    // On charge l'IP et la Clé SSH
+                    withCredentials([
+                        string(credentialsId: 'RASPI_IP', variable: 'IP'),
+                        sshUserPrivateKey(credentialsId: 'RASPI_SSH_KEY', keyFileVariable: 'SSH_KEY_FILE', usernameVariable: 'SSH_USER')
+                    ]) {
+                        echo "Déploiement sur ${IP} via clé SSH..."
+                        
+                        // On utilise -i avec le fichier de clé temporaire créé par Jenkins
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'mkdir -p ~/ansible_deploy'
+                            scp -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} -r ./* ${SSH_USER}@${IP}:~/ansible_deploy/
+                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini'
+                        """
                     }
                 }
             }
