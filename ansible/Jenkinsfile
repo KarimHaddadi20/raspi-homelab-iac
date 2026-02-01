@@ -4,21 +4,19 @@ pipeline {
     stages {
         stage('Deploy via SSH') {
             steps {
-                script {
-                    // On utilise withCredentials qui est TOUJOURS disponible
-                    withCredentials([
-                        string(credentialsId: 'RASPI_IP', variable: 'IP'),
-                        sshUserPrivateKey(credentialsId: 'RASPI_SSH_KEY', keyFileVariable: 'SSH_KEY_FILE', usernameVariable: 'SSH_USER')
-                    ]) {
-                        echo "Déploiement sur ${IP} via clé SSH..."
-                        
-                        // On utilise directement les commandes sh sans passer par sshagent
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'mkdir -p ~/ansible_deploy'
-                            scp -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} -r ./* ${SSH_USER}@${IP}:~/ansible_deploy/
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini'
-                        """
-                    }
+                // On utilise uniquement withCredentials qui est natif
+                withCredentials([
+                    string(credentialsId: 'RASPI_IP', variable: 'IP'),
+                    sshUserPrivateKey(credentialsId: 'RASPI_SSH_KEY', keyFileVariable: 'SSH_KEY_FILE', usernameVariable: 'SSH_USER')
+                ]) {
+                    echo "Déploiement sur ${IP} via clé SSH..."
+                    
+                    // On passe la clé directement à la commande ssh avec -i
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'mkdir -p ~/ansible_deploy'
+                        scp -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} -r ./* ${SSH_USER}@${IP}:~/ansible_deploy/
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini'
+                    """
                 }
             }
         }
