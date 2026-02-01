@@ -1,27 +1,20 @@
 pipeline {
     agent any
 
-    environment {
-        ANSIBLE_FORCE_COLOR = 'true'
-    }
-
     stages {
-        stage('Deploy via SSH') {
+        stage('Deploy via SSH Key') {
             steps {
                 script {
-                    withCredentials([
-                        string(credentialsId: 'RASPI_IP', variable: 'IP'),
-                        usernamePassword(credentialsId: 'RASPI_AUTH', usernameVariable: 'USER', passwordVariable: 'PASS')
-                    ]) {
-                        echo "Connexion au Raspberry Pi pour lancer le déploiement..."
-                        
-                        // On envoie tout le dossier au Pi et on lance ansible là-bas
-                        // C'est beaucoup plus simple et efficace !
-                        sh """
-                            sshpass -p '${PASS}' ssh -o StrictHostKeyChecking=no ${USER}@${IP} 'mkdir -p /home/${USER}/ansible_deploy'
-                            sshpass -p '${PASS}' scp -r ./* ${USER}@${IP}:/home/${USER}/ansible_deploy/
-                            sshpass -p '${PASS}' ssh ${USER}@${IP} 'cd /home/${USER}/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"'
-                        """
+                    withCredentials([string(credentialsId: 'RASPI_IP', variable: 'IP')]) {
+                        // On utilise le credential SSH qu'on vient de créer
+                        sshagent(credentials: ['RASPI_SSH_KEY']) {
+                            echo "Déploiement sécurisé sur ${IP}..."
+                            sh """
+                                ssh -o StrictHostKeyChecking=no ken@${IP} 'mkdir -p ~/ansible_deploy'
+                                scp -r ./* ken@${IP}:~/ansible_deploy/
+                                ssh ken@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini'
+                            """
+                        }
                     }
                 }
             }
