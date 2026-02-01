@@ -2,50 +2,34 @@ pipeline {
     agent any
 
     environment {
-        // On récupère tes credentials Jenkins ici
-        RASPI_IP   = credentials('RASPI_IP')
-        RASPI_AUTH = credentials('RASPI_AUTH')
         ANSIBLE_FORCE_COLOR = 'true'
     }
 
     stages {
-        stage('Setup Environment') {
+        stage('Deploy via SSH') {
             steps {
-                echo 'Installation d\'Ansible dans le container Jenkins...'
-                sh '''
-                    python3 -m venv venv
-                    ./venv/bin/pip install --upgrade pip
-                    ./venv/bin/pip install ansible
-                '''
-            }
-        }
-
-        stage('Prepare Inventory') {
-            steps {
-                echo 'Reconstruction dynamique de l\'inventaire...'
-                sh '''
-                    mkdir -p inventory
-                    echo "[raspi]" > inventory/hosts.ini
-                    echo "${RASPI_IP} ansible_user=${RASPI_AUTH_USR} ansible_password=${RASPI_AUTH_PSW}" >> inventory/hosts.ini
-                    
-                    mkdir -p group_vars
-                    echo "ansible_python_interpreter: /usr/bin/python3" > group_vars/raspi.yml
-                '''
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo 'Déploiement de l\'infrastructure...'
-                // On utilise l'ansible installé dans le venv
-                sh './venv/bin/ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${RASPI_AUTH_PSW}"'
+                script {
+                    withCredentials([
+                        string(credentialsId: 'RASPI_IP', variable: 'IP'),
+                        usernamePassword(credentialsId: 'RASPI_AUTH', usernameVariable: 'USER', passwordVariable: 'PASS')
+                    ]) {
+                        echo "Connexion au Raspberry Pi pour lancer le déploiement..."
+                        
+                        // On envoie tout le dossier au Pi et on lance ansible là-bas
+                        // C'est beaucoup plus simple et efficace !
+                        sh """
+                            sshpass -p '${PASS}' ssh -o StrictHostKeyChecking=no ${USER}@${IP} 'mkdir -p /home/${USER}/ansible_deploy'
+                            sshpass -p '${PASS}' scp -r ./* ${USER}@${IP}:/home/${USER}/ansible_deploy/
+                            sshpass -p '${PASS}' ssh ${USER}@${IP} 'cd /home/${USER}/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"'
+                        """
+                    }
+                }
             }
         }
     }
 
     post {
         always {
-            echo 'Nettoyage du workspace...'
             cleanWs()
         }
     }

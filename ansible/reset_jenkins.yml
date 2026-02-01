@@ -1,0 +1,29 @@
+---
+- name: Réinitialisation complète de Jenkins
+  hosts: raspi
+  become: true
+  tasks:
+    - name: Arrêt et suppression du container Jenkins
+      community.docker.docker_container:
+        name: jenkins
+        state: absent
+
+    - name: Suppression des données Jenkins (Reset total)
+      file:
+        path: "/home/{{ ansible_user }}/jenkins"
+        state: absent
+
+    - name: Création du dossier Jenkins (Propre)
+      file:
+        path: "/home/{{ ansible_user }}/jenkins"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Relancement de Jenkins via le rôle
+      include_role:
+        name: jenkins
+
+    - name: Rappel
+      debug:
+        msg: "Jenkins a été réinitialisé. Surveille ton terminal pour le nouveau mot de passe administrateur !"
