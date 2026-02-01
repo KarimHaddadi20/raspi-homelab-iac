@@ -2,34 +2,50 @@ pipeline {
     agent any
 
     environment {
+        // On récupère tes credentials Jenkins ici
+        RASPI_IP   = credentials('RASPI_IP')
+        RASPI_AUTH = credentials('RASPI_AUTH')
         ANSIBLE_FORCE_COLOR = 'true'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Setup Environment') {
             steps {
-                checkout scm
+                echo 'Installation d\'Ansible dans le container Jenkins...'
+                sh '''
+                    python3 -m venv venv
+                    ./venv/bin/pip install --upgrade pip
+                    ./venv/bin/pip install ansible
+                '''
             }
         }
 
-        stage('Lint') {
+        stage('Prepare Inventory') {
             steps {
-                echo 'Vérification de la syntaxe Ansible...'
-                // sh 'ansible-lint site.yml' // À activer quand le plugin est installé
+                echo 'Reconstruction dynamique de l\'inventaire...'
+                sh '''
+                    mkdir -p inventory
+                    echo "[raspi]" > inventory/hosts.ini
+                    echo "${RASPI_IP} ansible_user=${RASPI_AUTH_USR} ansible_password=${RASPI_AUTH_PSW}" >> inventory/hosts.ini
+                    
+                    mkdir -p group_vars
+                    echo "ansible_python_interpreter: /usr/bin/python3" > group_vars/raspi.yml
+                '''
             }
         }
 
         stage('Deploy') {
             steps {
                 echo 'Déploiement de l\'infrastructure...'
-                // Note: Jenkins aura besoin des credentials pour accéder au Pi
-                sh 'ansible-playbook site.yml -i inventory/hosts.ini'
+                // On utilise l'ansible installé dans le venv
+                sh './venv/bin/ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${RASPI_AUTH_PSW}"'
             }
         }
     }
 
     post {
         always {
+            echo 'Nettoyage du workspace...'
             cleanWs()
         }
     }
