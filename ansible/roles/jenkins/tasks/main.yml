@@ -16,17 +16,27 @@
     project_src: "/home/{{ ansible_user }}/jenkins"
     state: present
 
-- name: Attente du démarrage de Jenkins
+- name: Vérification si Jenkins est déjà configuré
+  stat:
+    path: "/home/{{ ansible_user }}/jenkins/jenkins_home/config.xml"
+  register: jenkins_config
+
+- name: Attente du mot de passe initial (uniquement à la première installation)
   wait_for:
     path: "/home/{{ ansible_user }}/jenkins/jenkins_home/secrets/initialAdminPassword"
     state: present
-    timeout: 300
+    timeout: 60
+  when: not jenkins_config.stat.exists
+  ignore_errors: true
 
 - name: Récupération du mot de passe initial
   slurp:
     src: "/home/{{ ansible_user }}/jenkins/jenkins_home/secrets/initialAdminPassword"
   register: jenkins_password
+  when: not jenkins_config.stat.exists
+  ignore_errors: true
 
 - name: Affichage du mot de passe initial
   debug:
-    msg: "Ton mot de passe Jenkins initial est : {{ jenkins_password['content'] | b64decode }}"
+    msg: "Ton mot de passe Jenkins initial est : {{ jenkins_password['content'] | b64decode if (jenkins_password is defined and 'content' in jenkins_password) else 'Déjà configuré' }}"
+  when: not jenkins_config.stat.exists
