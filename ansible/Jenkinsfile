@@ -1,27 +1,26 @@
 pipeline {
     agent any
-
     stages {
-        stage('Deploy via SSH') {
+        stage('Deploy via SSH File') {
             steps {
-                // On utilise uniquement withCredentials qui est natif
-                withCredentials([
-                    string(credentialsId: 'RASPI_IP', variable: 'IP'),
-                    sshUserPrivateKey(credentialsId: 'RASPI_SSH_KEY', keyFileVariable: 'SSH_KEY_FILE', usernameVariable: 'SSH_USER')
-                ]) {
-                    echo "Déploiement sur ${IP} via clé SSH..."
-                    
-                    // On passe la clé directement à la commande ssh avec -i
-                    sh """
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'mkdir -p ~/ansible_deploy'
-                        scp -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} -r ./* ${SSH_USER}@${IP}:~/ansible_deploy/
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_FILE} ${SSH_USER}@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini'
-                    """
+                script {
+                    withCredentials([
+                        string(credentialsId: 'RASPI_IP', variable: 'IP'),
+                        file(credentialsId: 'RASPI_SSH_KEY_FILE', variable: 'KEY_PATH'),
+                        usernamePassword(credentialsId: 'RASPI_AUTH', usernameVariable: 'USER', passwordVariable: 'PASS')
+                    ]) {
+                        echo "Déploiement forcé sur ${IP}..."
+                        sh """
+                            chmod 600 ${KEY_PATH}
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'mkdir -p ~/ansible_deploy'
+                            scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./* ${USER}@${IP}:~/ansible_deploy/
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"'
+                        """
+                    }
                 }
             }
         }
     }
-
     post {
         always {
             cleanWs()
