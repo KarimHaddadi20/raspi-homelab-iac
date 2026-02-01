@@ -1,29 +1,36 @@
 pipeline {
     agent any
     stages {
-        stage('Deploy via SSH File') {
+        stage('Deploy') {
             steps {
                 script {
                     withCredentials([
                         string(credentialsId: 'RASPI_IP', variable: 'IP'),
-                        file(credentialsId: 'RASPI_SSH_KEY_FILE', variable: 'KEY_PATH'),
-                        usernamePassword(credentialsId: 'RASPI_AUTH', usernameVariable: 'USER', passwordVariable: 'PASS')
+                        string(credentialsId: 'RASPI_USER', variable: 'USER'),
+                        string(credentialsId: 'RASPI_PASS', variable: 'PASS'),
+                        file(credentialsId: 'RASPI_SSH_KEY_FILE', variable: 'KEY_PATH')
                     ]) {
-                        echo "Déploiement forcé sur ${IP}..."
+                        echo "Déploiement sur ${IP}..."
                         sh """
                             chmod 600 ${KEY_PATH}
-                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'mkdir -p ~/ansible_deploy'
+                            
+                            # 1. On nettoie et on crée le dossier
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy'
+                            
+                            # 2. On copie TOUT le projet
                             scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./* ${USER}@${IP}:~/ansible_deploy/
-                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} 'cd ~/ansible_deploy && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"'
+                            
+                            # 3. On lance Ansible (on cherche site.yml là où il est vraiment)
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} '
+                                cd ~/ansible_deploy
+                                # Si site.yml est dans un dossier ansible/, on y va
+                                [ -d ansible ] && cd ansible
+                                ansible-playbook site.yml -i inventory/hosts.ini --extra-vars "ansible_sudo_pass=${PASS}"
+                            '
                         """
                     }
                 }
             }
-        }
-    }
-    post {
-        always {
-            cleanWs()
         }
     }
 }
