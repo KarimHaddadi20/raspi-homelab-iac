@@ -2,6 +2,7 @@ services:
   haproxy:
     image: haproxy:latest
     container_name: haproxy
+    user: root
     restart: unless-stopped
     ports:
       - "80:80"

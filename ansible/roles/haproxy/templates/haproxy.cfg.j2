@@ -1,6 +1,6 @@
 global
     log stdout format raw local0
-    stats socket /var/run/haproxy.stat mode 660 level admin
+    stats socket /tmp/haproxy.stat mode 660 level admin
     stats timeout 30s
 
 defaults
