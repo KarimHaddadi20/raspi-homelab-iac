@@ -18,13 +18,16 @@ resolvers docker_resolver
 frontend http-in
     bind *:80
     
-    # Statistiques accessibles via http://IP/haproxy_stats
+    # Définition de la règle pour les statistiques
+    acl is_stats path_beg /haproxy_stats
+    
+    # Configuration des statistiques internes
     stats enable
     stats uri /haproxy_stats
     stats refresh 5s
     
-    # Par défaut, on envoie vers Jenkins
-    default_backend jenkins_backend
+    # Routage : vers Jenkins uniquement si ce n'est PAS les stats
+    use_backend jenkins_backend if !is_stats
 
 backend jenkins_backend
     # On accepte le 403 de Jenkins comme un signe de vie
