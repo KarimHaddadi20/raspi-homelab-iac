@@ -4,11 +4,13 @@ global
 
 defaults
     mode http
+    log global
+    option httplog
     timeout connect 5s
     timeout client  50s
     timeout server  50s
 
-# Annuaire Docker (pour trouver 'jenkins')
+# Annuaire Docker pour la résolution dynamique
 resolvers docker_resolver
     nameserver dns1 127.0.0.11:53
     hold valid 10s
@@ -16,18 +18,15 @@ resolvers docker_resolver
 frontend http-in
     bind *:80
     
-    # On envoie TOUT vers Jenkins par défaut pour valider la connectivité
+    # Statistiques accessibles via http://IP/haproxy_stats
+    stats enable
+    stats uri /haproxy_stats
+    stats refresh 5s
+    
+    # Par défaut, on envoie vers Jenkins
     default_backend jenkins_backend
 
 backend jenkins_backend
     # On accepte le 403 de Jenkins comme un signe de vie
     http-check expect status 200-403
-    # On utilise le resolver pour ne jamais perdre Jenkins
     server jenkins_srv jenkins:8080 check resolvers docker_resolver init-addr last,libc,none
-
-# On garde les stats sur un port séparé (8404) comme dans ton docker-compose
-listen stats
-    bind *:8404
-    stats enable
-    stats uri /stats
-    stats refresh 5s
