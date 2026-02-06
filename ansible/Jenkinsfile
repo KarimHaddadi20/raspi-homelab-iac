@@ -12,18 +12,27 @@ pipeline {
                         string(credentialsId: 'HAPROXY_STATS_PASS', variable: 'STATS_PASS'),
                         file(credentialsId: 'RASPI_SSH_KEY_FILE', variable: 'KEY_PATH')
                     ]) {
-                        echo "Déploiement sécurisé de HAProxy..."
+                        echo "Déploiement sécurisé de HAProxy sur ${IP}..."
                         sh """
                             chmod 600 ${KEY_PATH}
+                            
+                            # Préparation du dossier sur le Pi
                             ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy"
+                            
+                            # Copie du contenu du dossier ansible
                             scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./ansible/* ${USER}@${IP}:~/ansible_deploy/
                             
-                            # Injection de TOUTES les variables sécurisées dans Ansible
+                            # Lancement d'Ansible avec injection des secrets
                             ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "cd ~/ansible_deploy && mkdir -p inventory && echo '[raspi]' > inventory/hosts.ini && echo 'localhost ansible_connection=local ansible_user=${USER}' >> inventory/hosts.ini && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars 'ansible_user=${USER} ansible_sudo_pass=${PASS} haproxy_stats_user=${STATS_USER} haproxy_stats_password=${STATS_PASS}'"
                         """
                     }
                 }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs()
         }
     }
 }
