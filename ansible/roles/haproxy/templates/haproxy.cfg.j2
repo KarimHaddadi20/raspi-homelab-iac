@@ -32,8 +32,9 @@ frontend http-in
     default_backend jenkins_backend
 
 backend jenkins_backend
-    # Test avec l'IP directe pour contourner les problèmes de DNS
-    server jenkins_srv 172.19.0.3:8080 check
+    # On accepte les codes 200 à 403 comme étant "Sains" pour Jenkins
+    http-check expect status 200-403
+    server jenkins_srv jenkins:8080 check resolvers docker_resolver init-addr last,libc,none
 
 backend stats_backend
     stats enable
