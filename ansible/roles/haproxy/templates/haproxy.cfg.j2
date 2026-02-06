@@ -7,36 +7,16 @@ defaults
     log global
     mode http
     option httplog
-    timeout connect 10s
-    timeout client  1m
-    timeout server  1m
-
-# Annuaire interne Docker pour la résolution de noms
-resolvers docker_resolver
-    nameserver dns1 127.0.0.11:53
-    resolve_retries 3
-    hold valid 10s
+    timeout connect 5s
+    timeout client  50s
+    timeout server  50s
 
 frontend http-in
     bind *:80
     
-    # Statistiques HAProxy
-    acl is_stats path_beg /stats
-    use_backend stats_backend if is_stats
-
-    # Routage vers Jenkins (via domaine)
-    acl is_jenkins hdr(host) -i jenkins.local
-    use_backend jenkins_backend if is_jenkins
-    
-    # Par défaut, on envoie vers Jenkins pour le test IP directe
+    # On envoie tout vers Jenkins sans poser de questions pour valider la connectivité
     default_backend jenkins_backend
 
 backend jenkins_backend
-    # On accepte les codes 200 à 403 comme étant "Sains" pour Jenkins
-    http-check expect status 200-403
-    server jenkins_srv jenkins:8080 check resolvers docker_resolver init-addr last,libc,none
-
-backend stats_backend
-    stats enable
-    stats uri /stats
-    stats refresh 10s
+    # PAS DE CHECK : On fait confiance au réseau Docker pour ce test
+    server jenkins_srv jenkins:8080
