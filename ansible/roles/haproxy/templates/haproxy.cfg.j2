@@ -11,12 +11,15 @@ defaults
     timeout client  50s
     timeout server  50s
 
+# Annuaire interne Docker pour la résolution dynamique
+resolvers docker_resolver
+    nameserver dns1 127.0.0.11:53
+    hold valid 10s
+
 frontend http-in
     bind *:80
-    
-    # On envoie tout vers Jenkins sans poser de questions pour valider la connectivité
     default_backend jenkins_backend
 
 backend jenkins_backend
-    # PAS DE CHECK : On fait confiance au réseau Docker pour ce test
-    server jenkins_srv jenkins:8080
+    # On utilise le resolver et init-addr pour forcer HAProxy à chercher Jenkins
+    server jenkins_srv jenkins:8080 resolvers docker_resolver init-addr last,libc,none
