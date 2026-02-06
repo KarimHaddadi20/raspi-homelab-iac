@@ -1,25 +1,33 @@
 global
     log stdout format raw local0
     stats socket /tmp/haproxy.stat mode 660 level admin
-    stats timeout 30s
 
 defaults
-    log global
     mode http
-    option httplog
     timeout connect 5s
     timeout client  50s
     timeout server  50s
 
-# Annuaire interne Docker pour la résolution dynamique
+# Annuaire Docker (pour trouver 'jenkins')
 resolvers docker_resolver
     nameserver dns1 127.0.0.11:53
     hold valid 10s
 
 frontend http-in
     bind *:80
+    
+    # On envoie TOUT vers Jenkins par défaut pour valider la connectivité
     default_backend jenkins_backend
 
 backend jenkins_backend
-    # On utilise le resolver et init-addr pour forcer HAProxy à chercher Jenkins
-    server jenkins_srv jenkins:8080 resolvers docker_resolver init-addr last,libc,none
+    # On accepte le 403 de Jenkins comme un signe de vie
+    http-check expect status 200-403
+    # On utilise le resolver pour ne jamais perdre Jenkins
+    server jenkins_srv jenkins:8080 check resolvers docker_resolver init-addr last,libc,none
+
+# On garde les stats sur un port séparé (8404) comme dans ton docker-compose
+listen stats
+    bind *:8404
+    stats enable
+    stats uri /stats
+    stats refresh 5s
