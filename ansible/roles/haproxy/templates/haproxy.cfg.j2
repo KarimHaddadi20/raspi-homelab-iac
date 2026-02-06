@@ -32,8 +32,8 @@ frontend http-in
     default_backend jenkins_backend
 
 backend jenkins_backend
-    # Utilisation du resolver pour trouver le container 'jenkins' dynamiquement
-    server jenkins_srv jenkins:8080 check resolvers docker_resolver init-addr last,libc,none
+    # Test avec l'IP directe pour contourner les problèmes de DNS
+    server jenkins_srv 172.19.0.3:8080 check
 
 backend stats_backend
     stats enable
