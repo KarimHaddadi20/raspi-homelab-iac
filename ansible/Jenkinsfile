@@ -8,20 +8,18 @@ pipeline {
                         string(credentialsId: 'RASPI_IP', variable: 'IP'),
                         string(credentialsId: 'RASPI_USER', variable: 'USER'),
                         string(credentialsId: 'RASPI_PASS', variable: 'PASS'),
+                        string(credentialsId: 'HAPROXY_STATS_USER', variable: 'STATS_USER'),
+                        string(credentialsId: 'HAPROXY_STATS_PASS', variable: 'STATS_PASS'),
                         file(credentialsId: 'RASPI_SSH_KEY_FILE', variable: 'KEY_PATH')
                     ]) {
-                        echo "Déploiement HAProxy sur ${IP}..."
+                        echo "Déploiement sécurisé de HAProxy..."
                         sh """
                             chmod 600 ${KEY_PATH}
-                            
-                            # 1. Nettoyage et préparation du dossier
                             ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "rm -rf ~/ansible_deploy && mkdir -p ~/ansible_deploy"
-                            
-                            # 2. Copie du contenu du dossier ansible
                             scp -o StrictHostKeyChecking=no -i ${KEY_PATH} -r ./ansible/* ${USER}@${IP}:~/ansible_deploy/
                             
-                            # 3. LA SOLUTION : On injecte ansible_user directement dans la commande
-                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "cd ~/ansible_deploy && mkdir -p inventory && echo '[raspi]' > inventory/hosts.ini && echo 'localhost ansible_connection=local' >> inventory/hosts.ini && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars 'ansible_user=${USER} ansible_sudo_pass=${PASS}'"
+                            # Injection de TOUTES les variables sécurisées dans Ansible
+                            ssh -o StrictHostKeyChecking=no -i ${KEY_PATH} ${USER}@${IP} "cd ~/ansible_deploy && mkdir -p inventory && echo '[raspi]' > inventory/hosts.ini && echo 'localhost ansible_connection=local ansible_user=${USER}' >> inventory/hosts.ini && ansible-playbook site.yml -i inventory/hosts.ini --extra-vars 'ansible_user=${USER} ansible_sudo_pass=${PASS} haproxy_stats_user=${STATS_USER} haproxy_stats_password=${STATS_PASS}'"
                         """
                     }
                 }

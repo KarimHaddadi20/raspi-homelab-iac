@@ -21,10 +21,11 @@ frontend http-in
     # Définition de la règle pour les statistiques
     acl is_stats path_beg /haproxy_stats
     
-    # Configuration des statistiques internes
+    # Configuration des statistiques internes avec variables sécurisées
     stats enable
     stats uri /haproxy_stats
     stats refresh 5s
+    stats auth {{ haproxy_stats_user }}:{{ haproxy_stats_password }}
     
     # Routage : vers Jenkins uniquement si ce n'est PAS les stats
     use_backend jenkins_backend if !is_stats
