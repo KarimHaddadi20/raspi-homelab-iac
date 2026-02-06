@@ -1,0 +1,28 @@
+---
+- name: Arrêt de Nginx Proxy Manager pour libérer les ports 80/443
+  community.docker.docker_container:
+    name: npm
+    state: absent
+  ignore_errors: true
+
+- name: Création du dossier HAProxy
+  file:
+    path: "/home/{{ ansible_user }}/haproxy"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Déploiement de la configuration HAProxy
+  template:
+    src: haproxy.cfg.j2
+    dest: "/home/{{ ansible_user }}/haproxy/haproxy.cfg"
+
+- name: Déploiement du docker-compose HAProxy
+  template:
+    src: docker-compose.yml.j2
+    dest: "/home/{{ ansible_user }}/haproxy/docker-compose.yml"
+
+- name: Lancement de HAProxy
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ ansible_user }}/haproxy"
+    state: present
