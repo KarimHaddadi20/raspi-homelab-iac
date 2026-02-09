@@ -10,7 +10,7 @@ services:
     networks:
       - proxy
     environment:
-      - INSTALL4J_ADD_VM_PARAMS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m # Limite RAM pour le Pi
+      - INSTALL4J_ADD_VM_PARAMS=-Xms1024m -Xmx1024m -XX:MaxDirectMemorySize=1024m # Augmenté à 1Go pour plus de stabilité
 
 networks:
   proxy:

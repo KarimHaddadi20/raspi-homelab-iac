@@ -1,10 +1,14 @@
 ---
-- name: Création du dossier Nexus
+- name: Création du dossier racine Nexus
   file:
-    path: "/home/{{ ansible_user }}/nexus"
+    path: "/home/{{ ansible_user }}/nexus/nexus-data"
     state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    mode: '0777'
+
+- name: Correction FORCE des permissions via Docker (Gourou Style)
+  shell: |
+    docker run --rm -v /home/{{ ansible_user }}/nexus/nexus-data:/data alpine chown -R 200:200 /data
+  become: true
 
 - name: Déploiement du docker-compose Nexus
   template:
