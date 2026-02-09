@@ -8,3 +8,4 @@
     - docker
     - jenkins
     - haproxy
+    - nexus

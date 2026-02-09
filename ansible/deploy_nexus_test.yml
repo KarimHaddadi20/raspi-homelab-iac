@@ -1,0 +1,22 @@
+---
+- name: Upload de binaire vers Nexus
+  hosts: raspi
+  become: true
+  tasks:
+    - name: Envoi du fichier vers Nexus
+      uri:
+        url: "http://localhost:8081/service/rest/v1/components?repository=maven-releases"
+        method: POST
+        user: "{{ nexus_user }}"
+        password: "{{ nexus_password }}"
+        force_basic_auth: yes
+        status_code: 204
+        body_format: form-multipart
+        body:
+          maven2.groupId: "com.homelab"
+          maven2.artifactId: "test-bundle"
+          maven2.version: "{{ bundle_version }}"
+          maven2.asset1:
+            filename: "{{ local_file_path }}"
+            content: "{{ lookup('file', local_file_path) }}"
+          maven2.asset1.extension: "zip"
